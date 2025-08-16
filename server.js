@@ -12,9 +12,6 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const axios = require('axios');
-console.log('⚙️ 미들웨어를 설정합니다...');
-
 // 미들웨어 설정
 app.use(helmet());
 app.use(cors({
