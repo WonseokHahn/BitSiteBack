@@ -47,6 +47,19 @@ try {
   console.error('❌ OAuth 설정 로드 실패:', error.message);
 }
 
+// JWT 토큰 생성 함수
+const generateToken = (user) => {
+  return jwt.sign(
+    { 
+      id: user.id, 
+      email: user.email,
+      name: user.name 
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+};
+
 // API 요청 로깅 미들웨어
 app.use('/api', (req, res, next) => {
   console.log(`🔍 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
