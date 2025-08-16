@@ -20,7 +20,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   
   // 콜백 URL을 환경에 따라 설정 (중요!)
   const googleCallbackURL = process.env.NODE_ENV === 'production' 
-    ? "https://tradesiteback.onrender.com/api/auth/google/callback"  // 프로덕션: HTTPS
+    ? "https://bitsiteback.onrender.com/api/auth/google/callback"  // 프로덕션: HTTPS
     : "http://localhost:3000/api/auth/google/callback";             // 개발: HTTP
   
   console.log('🔗 Google 콜백 URL:', googleCallbackURL);
@@ -87,7 +87,7 @@ if (process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET) {
   
   // 콜백 URL을 환경에 따라 설정 (중요!)
   const kakaoCallbackURL = process.env.NODE_ENV === 'production'
-    ? "https://tradesiteback.onrender.com/api/auth/kakao/callback"   // 프로덕션: HTTPS
+    ? "https://bitsiteback.onrender.com/api/auth/kakao/callback"   // 프로덕션: HTTPS
     : "http://localhost:3000/api/auth/kakao/callback";              // 개발: HTTP
   
   console.log('🔗 Kakao 콜백 URL:', kakaoCallbackURL);

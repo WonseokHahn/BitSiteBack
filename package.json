@@ -1,5 +1,5 @@
 {
-  "name": "trade_backend",
+  "name": "bit_backend",
   "version": "1.0.0",
   "description": "Stock trading automation backend",
   "main": "server.js",
