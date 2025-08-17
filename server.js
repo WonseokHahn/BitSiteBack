@@ -35,6 +35,16 @@ try {
   console.error('❌ 데이터베이스 연결 실패:', error.message);
 }
 
+// trading 테이블 추가
+console.log('🗄️ 매매 관련 테이블을 생성합니다...');
+try {
+  const { createTradingTables } = require('./src/config/database');
+  createTradingTables();
+  console.log('✅ 매매 테이블 생성 완료');
+} catch (error) {
+  console.error('❌ 매매 테이블 생성 실패:', error.message);
+}
+
 // OAuth 설정 로드
 console.log('🔧 OAuth 설정을 로드합니다...');
 try {
@@ -43,6 +53,17 @@ try {
 } catch (error) {
   console.error('❌ OAuth 설정 로드 실패:', error.message);
 }
+
+// Trading 라우터 추가 (기존 라우터들 다음에)
+console.log('📈 Trading 라우터를 로드합니다...');
+try {
+  const tradingRoutes = require('./src/routes/trading');
+  app.use('/api/trading', tradingRoutes);
+  console.log('✅ Trading 라우터 연결 완료');
+} catch (error) {
+  console.error('❌ Trading 라우터 로드 실패:', error.message);
+}
+
 
 // JWT 토큰 생성 함수
 const generateToken = (user) => {
@@ -68,12 +89,23 @@ app.get('/', (req, res) => {
   console.log('📍 기본 라우트 접근');
   res.json({ 
     message: '주식 자동매매 API 서버',
-    version: '2.1.0',
+    version: '2.2.0',
     status: 'running',
     timestamp: new Date().toISOString(),
-    oauth: {
-      google: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-      kakao: !!(process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET)
+    features: {
+      oauth: {
+        google: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+        kakao: !!(process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET)
+      },
+      trading: {
+        upbit: !!(process.env.UPBIT_ACCESS_KEY && process.env.UPBIT_SECRET_KEY),
+        ai: !!process.env.OPENAI_API_KEY
+      }
+    },
+    endpoints: {
+      auth: '/api/auth/*',
+      news: '/api/news/*', 
+      trading: '/api/trading/*'
     }
   });
 });
