@@ -12,46 +12,48 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 미들웨어 설정
-app.use(helmet());
-// app.use(cors({
-//   origin: '*', // 임시로 모든 도메인 허용
-//   credentials: false // credentials는 false로 설정
-// }));
-app.use(cors({
-  origin: [
-    'http://localhost:8080',
-    'http://localhost:3000', 
-    'https://wonseokhahn.github.io',
-    'https://bitsiteback.onrender.com'
-  ],
+// 헬멧 설정 (CORS 이전에)
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// 강화된 CORS 설정
+const corsOptions = {
+  origin: function (origin, callback) {
+    // 모든 도메인 허용 (개발 및 배포용)
+    callback(null, true);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
     'Origin',
-    'X-Requested-With', 
+    'X-Requested-With',
     'Content-Type',
     'Accept',
     'Authorization',
-    'Cache-Control'
-  ]
-}));
+    'Cache-Control',
+    'Access-Control-Allow-Origin'
+  ],
+  exposedHeaders: ['Authorization'],
+  maxAge: 86400 // 24시간
+};
 
-// OPTIONS 요청에 대한 명시적 처리 추가
-app.options('*', cors());
+app.use(cors(corsOptions));
 
-// 추가 CORS 헤더 설정 미들웨어
+// 추가 CORS 헤더 설정 (모든 요청에 대해)
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control');
   res.header('Access-Control-Allow-Credentials', 'true');
   
+  // OPTIONS 요청에 대한 처리
   if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
+    return res.status(200).end();
   }
+  
+  next();
 });
 
 app.use(express.json());
@@ -90,17 +92,6 @@ try {
   console.error('❌ OAuth 설정 로드 실패:', error.message);
 }
 
-// Trading 라우터 추가 (기존 라우터들 다음에)
-console.log('📈 Trading 라우터를 로드합니다...');
-try {
-  const tradingRoutes = require('./src/routes/trading');
-  app.use('/api/trading', tradingRoutes);
-  console.log('✅ Trading 라우터 연결 완료');
-} catch (error) {
-  console.error('❌ Trading 라우터 로드 실패:', error.message);
-}
-
-
 // JWT 토큰 생성 함수
 const generateToken = (user) => {
   return jwt.sign(
@@ -114,16 +105,34 @@ const generateToken = (user) => {
   );
 };
 
-// 모든 라우트 이전에 CORS 헤더 추가
-app.use('/api/*', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+// API 요청 로깅 미들웨어
+app.use('/api', (req, res, next) => {
+  console.log(`🔍 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  
+  // API 라우트에도 CORS 헤더 추가
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Credentials', 'true');
+  
   next();
 });
+
+// Trading 라우터 추가 (CORS 설정 이후에)
+console.log('📈 Trading 라우터를 로드합니다...');
+try {
+  const tradingRoutes = require('./src/routes/trading');
+  app.use('/api/trading', tradingRoutes);
+  console.log('✅ Trading 라우터 연결 완료');
+} catch (error) {
+  console.error('❌ Trading 라우터 로드 실패:', error.message);
+}
 
 // 기본 라우트
 app.get('/', (req, res) => {
   console.log('📍 기본 라우트 접근');
+  
+  // 기본 라우트에도 CORS 헤더 추가
+  res.header('Access-Control-Allow-Origin', '*');
+  
   res.json({ 
     message: '주식 자동매매 API 서버',
     version: '2.2.0',
@@ -206,6 +215,10 @@ app.get('/api/auth/profile',
   passport.authenticate('jwt', { session: false }),
   (req, res) => {
     console.log('👤 프로필 조회 성공:', req.user.email);
+    
+    // CORS 헤더 추가
+    res.header('Access-Control-Allow-Origin', '*');
+    
     const { password, ...userProfile } = req.user;
     res.json({
       success: true,
@@ -217,6 +230,10 @@ app.get('/api/auth/profile',
 // 로그아웃
 app.post('/api/auth/logout', (req, res) => {
   console.log('👋 로그아웃 요청');
+  
+  // CORS 헤더 추가
+  res.header('Access-Control-Allow-Origin', '*');
+  
   res.json({
     success: true,
     message: '로그아웃 되었습니다.'
@@ -228,6 +245,9 @@ app.get('/api/news/search', async (req, res) => {
   try {
     const { keyword } = req.query;
     console.log('📰 뉴스 검색 요청:', { keyword });
+    
+    // CORS 헤더 추가
+    res.header('Access-Control-Allow-Origin', '*');
     
     if (!keyword || keyword.trim() === '') {
       return res.status(400).json({
@@ -298,7 +318,7 @@ app.get('/api/news/search', async (req, res) => {
   }
 });
 
-// 네이버 뉴스 검색 API 함수
+// 나머지 함수들 (변경 없음)
 async function searchNaverNews(keyword) {
   try {
     const axios = require('axios');
@@ -308,9 +328,9 @@ async function searchNaverNews(keyword) {
     const response = await axios.get('https://openapi.naver.com/v1/search/news.json', {
       params: {
         query: keyword,
-        display: 10, // 최대 10개 결과
+        display: 10,
         start: 1,
-        sort: 'date' // 최신순 정렬
+        sort: 'date'
       },
       headers: {
         'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID,
@@ -326,12 +346,10 @@ async function searchNaverNews(keyword) {
     }
 
     const articles = response.data.items.map((item, index) => {
-      // HTML 태그 제거 함수
       const removeHtmlTags = (str) => {
         return str.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
       };
 
-      // 날짜 포맷팅
       const formatDate = (dateString) => {
         try {
           const date = new Date(dateString);
@@ -359,7 +377,6 @@ async function searchNaverNews(keyword) {
   } catch (error) {
     console.error('❌ 네이버 뉴스 API 호출 실패:', error.response?.data || error.message);
     
-    // API 오류 시 대체 데이터
     return [{
       id: 1,
       title: `${keyword} 관련 뉴스 검색 오류`,
@@ -373,11 +390,9 @@ async function searchNaverNews(keyword) {
   }
 }
 
-// GPT 요약 생성 함수 (개선된 버전)
 async function generateSummary(content) {
   try {
     if (!process.env.OPENAI_API_KEY) {
-      // OpenAI API가 없을 때 간단한 대체 요약
       const sentences = content.split('.').filter(s => s.trim().length > 10);
       if (sentences.length > 0) {
         return sentences.slice(0, 2).join('. ').substring(0, 150) + '.';
@@ -414,7 +429,6 @@ async function generateSummary(content) {
   } catch (error) {
     console.error('❌ GPT 요약 생성 오류:', error.response?.data || error.message);
     
-    // GPT API 오류 시 간단한 대체 요약
     const sentences = content.split('.').filter(s => s.trim().length > 10);
     if (sentences.length > 0) {
       return sentences.slice(0, 2).join('. ').substring(0, 150) + '.';
@@ -427,6 +441,10 @@ async function generateSummary(content) {
 // 에러 핸들링
 app.use((err, req, res, next) => {
   console.error('💥 서버 에러:', err);
+  
+  // 에러 응답에도 CORS 헤더 추가
+  res.header('Access-Control-Allow-Origin', '*');
+  
   res.status(500).json({ 
     message: '서버 오류가 발생했습니다.',
     error: process.env.NODE_ENV === 'development' ? err.message : {}
@@ -436,6 +454,10 @@ app.use((err, req, res, next) => {
 // 404 핸들링 (맨 마지막에)
 app.use((req, res) => {
   console.log(`❌ 404 - 경로를 찾을 수 없음: ${req.method} ${req.originalUrl}`);
+  
+  // 404 응답에도 CORS 헤더 추가
+  res.header('Access-Control-Allow-Origin', '*');
+  
   res.status(404).json({ 
     message: '요청한 리소스를 찾을 수 없습니다.',
     path: req.originalUrl,
@@ -449,6 +471,7 @@ app.listen(PORT, () => {
   console.log(`🌐 접속 URL: http://localhost:${PORT}`);
   console.log('- Database:', '✅ 연결됨');
   console.log('- JWT:', !!process.env.JWT_SECRET ? '✅ 설정됨' : '❌ 미설정');
+  console.log('🔍 CORS 설정: 모든 도메인 허용');
 });
 
 // 프로세스 종료 처리
