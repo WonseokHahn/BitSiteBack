@@ -14,10 +14,46 @@ const PORT = process.env.PORT || 3000;
 
 // 미들웨어 설정
 app.use(helmet());
+// app.use(cors({
+//   origin: '*', // 임시로 모든 도메인 허용
+//   credentials: false // credentials는 false로 설정
+// }));
 app.use(cors({
-  origin: '*', // 임시로 모든 도메인 허용
-  credentials: false // credentials는 false로 설정
+  origin: [
+    'http://localhost:8080',
+    'http://localhost:3000', 
+    'https://wonseokhahn.github.io',
+    'https://bitsiteback.onrender.com'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With', 
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'Cache-Control'
+  ]
 }));
+
+// OPTIONS 요청에 대한 명시적 처리 추가
+app.options('*', cors());
+
+// 추가 CORS 헤더 설정 미들웨어
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -78,9 +114,10 @@ const generateToken = (user) => {
   );
 };
 
-// API 요청 로깅 미들웨어
-app.use('/api', (req, res, next) => {
-  console.log(`🔍 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+// 모든 라우트 이전에 CORS 헤더 추가
+app.use('/api/*', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
